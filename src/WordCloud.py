@@ -1,20 +1,35 @@
-from model.download_model import download_model_from_google_drive
 from gensim.models import FastText
 import pandas as pd
+import gdown
 
 
 class WordCloudFT(object):
-    def __init__(self, path_to_model: str | None = None):
+    def __init__(self, path_to_model: str | None = None, path_to_litter: str = ''):
+        '''
+        Creating class object
+
+        :param path_to_model: path to the model, if None author`s model will be downloaded and path will be 'modelWordCloud/synonyms_ft.model2'
+        :param path_to_litter: path to csv file with words to be deleted
+        '''
         if path_to_model is None:
-            download_model_from_google_drive(None)
-            self.model = FastText.load('../modelWorldCloud/synonyms_ft.model2')
+            gdown.download_folder(
+                'https://drive.google.com/drive/folders/1Q12TJnp_nYx5DqM-nqYiXGMBjhEpcrGF?usp=sharing')
+            self.model = FastText.load('modelWordCloud/synonyms_ft.model2')
         else:
             self.model = FastText.load(path_to_model)
         self.markings = {'(прост.)', '(устар.)', '(офиц.)', '(книжн.)',
                          '(высок.)', '(разг.)', '(бран.)', '(шутл.)', '(обл.)', '(спец.)'}
-        self.litter = set(pd.read_csv('./litter.csv')['0'].to_list())
+        if len(path_to_litter) != 0:
+            self.litter = set(pd.read_csv(path_to_litter)['0'].to_list())
+        else:
+            self.litter = {}
 
     def set_word_list(self, word_list: list | str):
+        '''
+        Setting list of words which word cloud will be made from
+
+        :param word_list: list of words or path to csv file with words (the 1st row must be '0', other words written in column)
+        '''
         if len(word_list) == 0:
             raise Exception("Word list is empty")
         if type(word_list) == str:
@@ -75,9 +90,17 @@ class WordCloudFT(object):
                 cluster)[0][1]] = len(cluster[0])
 
     def cloud_dict(self):
+        '''
+        Dictionary of words and count of words in cluster
+
+        :return: dictionary of words and count of words in cluster
+        '''
         return self.cloud
 
     def cloud_barchart(self):
+        '''
+        Displays horizontal barchart of cluster words and count of words in clusters
+        '''
         import matplotlib.pyplot as plt
 
         y = list(self.cloud.keys())
@@ -88,11 +111,18 @@ class WordCloudFT(object):
         None
 
     def cloud_cloud(self, colormap='spring', background_color='#333333'):
+        '''
+        Displays cloud of words using wordcloud package
+        '''
         from wordcloud import WordCloud as WC
+        import matplotlib.pyplot as plt
 
-        wordcloud = WC(width=800, height=800,
-                       background_color=background_color,
+        wordcloud = WC(background_color=background_color,
                        colormap=colormap,
                        min_font_size=10).generate_from_frequencies(self.cloud)
-
         wordcloud.to_image()
+        plt.axis('off')
+        plt.imshow(wordcloud)
+        plt.tight_layout(pad=0)
+        plt.figure(facecolor=None)
+        plt.show()
